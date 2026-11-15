@@ -1,0 +1,88 @@
+<!doctype html>
+<!-- Demo target app for gaptek-agent. Deliberately contains UX traps:
+     jargon ("Verifikasi OTP", "Checkout") and an icon-only submit button. -->
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WarungKu</title>
+<style>
+  body { font-family: sans-serif; margin: 0; background: #f5f5f5; }
+  header { background: #2e7d32; color: #fff; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; }
+  header h1 { font-size: 20px; margin: 0; }
+  main { padding: 16px; }
+  .item { background: #fff; border-radius: 8px; padding: 12px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
+  .btn { background: #2e7d32; color: #fff; border: 0; border-radius: 8px; padding: 12px 20px; font-size: 18px; }
+  .icon-btn { background: none; border: 0; padding: 6px; cursor: pointer; }
+  .icon-btn svg { width: 20px; height: 20px; fill: #888; }
+  .fab { position: fixed; right: 16px; bottom: 16px; width: 48px; height: 48px; border-radius: 50%; background: #1565c0; border: 0; }
+  .fab svg { width: 24px; height: 24px; fill: #fff; }
+  label { display: block; margin: 12px 0 4px; font-size: 14px; }
+  input { width: 100%; box-sizing: border-box; padding: 10px; font-size: 16px; border: 1px solid #ccc; border-radius: 6px; }
+  .hint { font-size: 11px; color: #999; }
+  .screen { display: none; }
+  .screen.active { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <h1>WarungKu</h1>
+  <button class="icon-btn" aria-label="Settings" title="Settings">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg>
+  </button>
+</header>
+
+<section id="menu" class="screen">
+  <main>
+    <p>Pilih makanan:</p>
+    <div class="item"><span>Nasi Goreng — Rp15.000</span><button class="btn" data-go="form">Checkout</button></div>
+    <div class="item"><span>Mie Ayam — Rp12.000</span><button class="btn" data-go="form">Checkout</button></div>
+  </main>
+</section>
+
+<section id="form" class="screen">
+  <main>
+    <p>Verifikasi OTP</p>
+    <label for="phone">Nomor HP</label>
+    <input id="phone" type="tel" placeholder="08xxxxxxxxxx">
+    <label for="otp">Kode OTP</label>
+    <input id="otp" inputmode="numeric" placeholder="6 digit OTP">
+    <p class="hint">OTP dikirim via SMS gateway. Resend dalam 60 detik.</p>
+    <button class="icon-btn" aria-label="Resend OTP" title="Resend OTP">
+      <svg viewBox="0 0 24 24"><path d="M12 4a8 8 0 1 0 8 8h-2a6 6 0 1 1-6-6V2l4 3-4 3z"/></svg>
+    </button>
+  </main>
+  <!-- Icon-only submit: the trap. -->
+  <button class="fab" aria-label="Submit" data-go="success" data-needs-input>
+    <svg viewBox="0 0 24 24"><path d="M5 12h12M13 6l6 6-6 6" stroke="#fff" stroke-width="2" fill="none"/></svg>
+  </button>
+</section>
+
+<section id="success" class="screen">
+  <main>
+    <h2>Pesanan berhasil!</h2>
+    <p>Terima kasih. Nasi goreng Anda sedang disiapkan.</p>
+    <button class="btn" data-go="menu">Kembali ke menu</button>
+  </main>
+</section>
+
+<script>
+  function show() {
+    const id = (location.hash.replace("#/", "") || "menu");
+    document.querySelectorAll(".screen").forEach(s => s.classList.toggle("active", s.id === id));
+  }
+  document.addEventListener("click", e => {
+    const b = e.target.closest("[data-go]");
+    if (!b) return;
+    if (b.hasAttribute("data-needs-input")) {
+      const phone = document.getElementById("phone").value.trim();
+      const otp = document.getElementById("otp").value.trim();
+      if (!phone || !otp) { alert("Field required"); return; }
+    }
+    location.hash = "#/" + b.dataset.go;
+  });
+  window.addEventListener("hashchange", show);
+  show();
+</script>
+</body>
+</html>

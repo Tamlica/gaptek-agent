@@ -1,0 +1,10 @@
+id: demo-order
+url: http://localhost:8000/
+goal_for_persona: >
+  Kamu mau pesan nasi goreng buat makan siang, terus selesaikan pesanannya.
+  Nomor HP-mu 081234567890. Kalau diminta kode dari SMS, kodenya 482913.
+success:
+  url_contains: "#/success"
+  text_visible: "Pesanan berhasil"
+progress_hints: ["#/menu", "#/form", "#/success"]
+max_steps: 40

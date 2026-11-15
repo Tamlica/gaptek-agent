@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>gaptek report: {{ meta.task }} / {{ meta.persona }}</title>
+<style>
+  :root { --bg:#fafafa; --fg:#1a1a1a; --muted:#666; --card:#fff; --line:#e3e3e3;
+          --high:#c62828; --medium:#ef6c00; --low:#757575; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#141414; --fg:#eaeaea; --muted:#9a9a9a; --card:#1e1e1e; --line:#333; }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; font:15px/1.5 system-ui, sans-serif; background:var(--bg); color:var(--fg); }
+  main { max-width:1100px; margin:0 auto; padding:24px 16px 64px; }
+  h1 { margin:0 0 4px; font-size:24px; }
+  h2 { margin:32px 0 12px; font-size:18px; }
+  .muted { color:var(--muted); }
+  .banner { background:#fff3e0; color:#5d3a00; border-left:4px solid var(--medium);
+            padding:10px 14px; border-radius:4px; margin:16px 0; }
+  .result { display:inline-block; padding:2px 10px; border-radius:12px; font-weight:600;
+            color:#fff; background:var(--high); }
+  .result.success { background:#2e7d32; }
+  .strip { display:flex; gap:2px; margin:8px 0; flex-wrap:wrap; }
+  .strip a { width:28px; height:28px; border-radius:4px; color:#fff; font-size:11px;
+             display:flex; align-items:center; justify-content:center; text-decoration:none; }
+  .legend span { display:inline-flex; align-items:center; gap:4px; margin-right:12px; font-size:13px; }
+  .legend i { width:12px; height:12px; border-radius:2px; display:inline-block; }
+  .issue { background:var(--card); border:1px solid var(--line); border-left:5px solid var(--low);
+           border-radius:6px; padding:12px 14px; margin-bottom:10px; }
+  .issue.high { border-left-color:var(--high); } .issue.medium { border-left-color:var(--medium); }
+  .sev { font-weight:700; text-transform:uppercase; font-size:12px; }
+  .issue.high .sev { color:var(--high); } .issue.medium .sev { color:var(--medium); }
+  .thumbs { display:flex; gap:6px; margin-top:8px; flex-wrap:wrap; }
+  .thumbs img { height:120px; border:1px solid var(--line); border-radius:4px; }
+  .step { display:grid; grid-template-columns:180px 1fr; gap:16px; background:var(--card);
+          border:1px solid var(--line); border-radius:6px; padding:12px; margin-bottom:10px; }
+  .step img { width:100%; border:1px solid var(--line); border-radius:4px; }
+  .pill { display:inline-block; padding:1px 8px; border-radius:10px; color:#fff; font-size:12px; }
+  pre { white-space:pre-wrap; background:var(--bg); padding:8px; border-radius:4px; font-size:12.5px;
+        margin:6px 0 0; }
+  details summary { cursor:pointer; color:var(--muted); font-size:13px; margin-top:6px; }
+  .noise { color:var(--medium); font-weight:600; }
+  @media (max-width:640px) { .step { grid-template-columns:1fr; } .step img { max-width:240px; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>{{ meta.persona_name }} &middot; {{ meta.task }}</h1>
+  <div class="muted">seed {{ meta.seed }} &middot; tester model {{ meta.tester_model }}</div>
+  <div class="banner"><strong>Simulation.</strong> These results come from an LLM playing a persona
+    with mechanically limited perception. Treat them as hypotheses to check with real users,
+    not as user research.</div>
+  <p><span class="result {{ meta.result }}">{{ meta.result }}</span>
+     after {{ meta.steps }} steps. <span class="muted">Goal: {{ meta.goal }}</span></p>
+  {% if findings %}<p>{{ findings.summary }}</p>{% endif %}
+
+  <h2>Emotion strip</h2>
+  <div class="strip">
+    {% for s in steps %}
+    <a href="#step-{{ s.step }}" style="background:{{ colors.get(s.tester.perasaan, '#999') }}"
+       title="step {{ s.step }}: {{ s.tester.perasaan }}">{{ s.step }}</a>
+    {% endfor %}
+  </div>
+  <div class="legend">
+    {% for name, c in colors.items() %}<span><i style="background:{{ c }}"></i>{{ name }}</span>{% endfor %}
+  </div>
+
+  <h2>Issues {% if findings %}({{ findings.issues|length }}){% endif %}</h2>
+  {% if not findings %}
+    <p class="muted">No findings.json yet. Run <code>gaptek report &lt;this run dir&gt;</code>
+      with an API key to analyze this run.</p>
+  {% else %}
+    {% for i in findings.issues %}
+    <div class="issue {{ i.severity }}">
+      <span class="sev">{{ i.severity }}</span>
+      <span class="muted">&middot; <a href="#step-{{ i.step }}">step {{ i.step }}</a> &middot; {{ i.screen }}</span>
+      <div><strong>{{ i.summary }}</strong></div>
+      <div>Suggestion: {{ i.suggestion }}</div>
+      <div class="thumbs">
+        {% for ev in i.evidence %}<a href="screenshots/{{ ev }}"><img src="screenshots/{{ ev }}" alt="{{ ev }}"></a>{% endfor %}
+      </div>
+    </div>
+    {% else %}<p class="muted">No issues reported.</p>{% endfor %}
+  {% endif %}
+
+  <h2>Timeline</h2>
+  {% for s in steps %}
+  <div class="step" id="step-{{ s.step }}">
+    <a href="{{ s.screenshot }}"><img src="{{ s.screenshot }}" alt="step {{ s.step }}"></a>
+    <div>
+      <div><strong>Step {{ s.step }}</strong> <span class="muted">{{ s.screen }}</span>
+        <span class="pill" style="background:{{ colors.get(s.tester.perasaan, '#999') }}">{{ s.tester.perasaan }}</span>
+        {% if s.patience is defined %}<span class="muted">&middot; patience {{ s.patience }}</span>{% endif %}
+      </div>
+      <div><em>&ldquo;{{ s.tester.pikiran }}&rdquo;</em></div>
+      <div>&rarr; {{ s.tester.aksi }}{% if s.tester.target %} {{ s.tester.target }}{% endif %}{% if s.tester.teks %} &ldquo;{{ s.tester.teks }}&rdquo;{% endif %}
+        {% if s.executed %}
+          {% if s.executed.misclicked %}<span class="noise">&middot; misclick (simulated)</span>{% endif %}
+          {% if s.executed.typed_text and s.executed.typed_text != s.tester.teks %}<span class="noise">&middot; typed &ldquo;{{ s.executed.typed_text }}&rdquo;</span>{% endif %}
+          {% if s.executed.error %}<span class="noise">&middot; {{ s.executed.error }}</span>{% endif %}
+          {% if not s.screen_changed %}<span class="muted">&middot; nothing changed</span>{% endif %}
+        {% endif %}
+      </div>
+      <details><summary>What the persona saw</summary><pre>{{ s.observation }}</pre></details>
+      <details><summary>What was really on screen</summary><pre>{{ s.raw_observation }}</pre></details>
+    </div>
+  </div>
+  {% endfor %}
+  {% for e in events %}<p class="muted">Step {{ e.step }}: {{ e.event }}</p>{% endfor %}
+</main>
+</body>
+</html>
