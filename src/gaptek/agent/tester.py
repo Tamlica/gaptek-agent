@@ -1,7 +1,7 @@
 """Tester LLM: plays the persona. Sees only the filtered observation text."""
 
 from collections.abc import Awaitable, Callable, Sequence
-from typing import Literal
+from typing import Literal, NamedTuple
 
 from pydantic import BaseModel
 
@@ -29,14 +29,33 @@ _PREFERS = {
 }
 
 
+class DeviceWords(NamedTuple):
+    where: str  # "di HP"
+    tap: str  # how "tekan" is done
+    scroll: str  # how "gulir" is done
+    back: str  # what "kembali" presses
+
+
+_PHONE = DeviceWords("di HP", "pencet sesuatu", "geser layar ke bawah", "tombol kembali di HP")
+_LAPTOP = DeviceWords(
+    "di laptop",
+    "klik sesuatu pakai mouse/touchpad",
+    "gulir layar ke bawah",
+    "tombol panah kembali di browser",
+)
+# device name (browser.DEVICES) -> wording; unknown devices read as a phone
+_DEVICE_WORDS = {"laptop": _LAPTOP, "desktop": _LAPTOP}
+
+
 def system_prompt(persona: Persona, task: Task) -> str:
+    dw = _DEVICE_WORDS.get(persona.device, _PHONE)
     habits = []
     if persona.behavior.prefers in _PREFERS:
         habits.append(_PREFERS[persona.behavior.prefers])
     if persona.behavior.uses_back_button_when_confused:
-        habits.append("Kalau bingung, kamu biasanya pencet tombol kembali.")
+        habits.append(f"Kalau bingung, kamu biasanya pencet {dw.back}.")
     if not persona.perception.scrolls_spontaneously:
-        habits.append("Kamu jarang terpikir untuk menggeser layar ke bawah.")
+        habits.append(f"Kamu jarang terpikir untuk {dw.scroll}.")
     habit_text = "\n".join(f"- {h}" for h in habits)
     return f"""Kamu adalah {persona.name}. {persona.background.strip()}
 
@@ -45,14 +64,14 @@ def system_prompt(persona: Persona, task: Task) -> str:
 Kebiasaanmu:
 {habit_text}
 
-Yang mau kamu lakukan sekarang di HP: {task.goal_for_persona}
+Yang mau kamu lakukan sekarang {dw.where}: {task.goal_for_persona}
 
 Cara kerjanya:
 - Setiap kali, kamu diberi tahu apa yang kamu lihat di "Layar sekarang". Kamu hanya tahu itu saja.
 - Tulisan "???" artinya kamu tidak bisa membaca atau tidak paham kata itu. Jangan menebak artinya
   seolah-olah kamu paham.
-- Pilih satu aksi: tekan (pencet sesuatu), ketik (tulis di kotak isian),
-  gulir (geser layar ke bawah), kembali (tombol kembali di HP), tunggu,
+- Pilih satu aksi: tekan ({dw.tap}), ketik (tulis di kotak isian),
+  gulir ({dw.scroll}), kembali ({dw.back}), tunggu,
   menyerah (kalau sudah tidak sanggup), atau selesai
   (kalau kamu yakin yang kamu mau sudah berhasil).
 - Untuk tekan dan ketik, isi "target" dengan kode dalam kurung siku, misalnya E2.

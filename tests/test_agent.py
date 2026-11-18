@@ -145,3 +145,17 @@ async def test_back_on_first_screen_reopens_app(demo_url: str, tmp_path: Path) -
     assert rows[0]["left_app"] is True
     assert "Pilih makanan" in rows[1]["observation"]  # back on the app, not a blank page
     assert res.steps == 2
+
+
+def test_system_prompt_device_wording() -> None:
+    from pathlib import Path
+
+    from gaptek.agent.tester import system_prompt
+    from gaptek.config import load_persona, load_task
+
+    task = load_task(Path("tasks/example.yaml"))
+    laptop = system_prompt(load_persona(Path("personas/bu-ratna-staf-kantor-laptop.yaml")), task)
+    phone = system_prompt(load_persona(Path("personas/bu-sri.yaml")), task)
+    assert "di laptop:" in laptop and "panah kembali di browser" in laptop
+    assert "di HP" not in laptop and "kembali di HP" not in laptop
+    assert "di HP:" in phone and "di laptop" not in phone

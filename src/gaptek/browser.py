@@ -19,6 +19,8 @@ DEVICES: dict[str, dict[str, Any]] = {
         ),
     },
     "desktop": {"viewport": {"width": 1280, "height": 800}},
+    # most common budget-laptop screen in Indonesia; mouse/touchpad, no touch
+    "laptop": {"viewport": {"width": 1366, "height": 768}},
 }
 
 

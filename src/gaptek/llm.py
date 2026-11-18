@@ -5,10 +5,15 @@ A model is named "provider:model", e.g. "anthropic:claude-haiku-5-5", "openai:gp
 Everything except anthropic goes through the OpenAI-compatible chat API.
 """
 
+import json
 import os
-from typing import NamedTuple
+import re
+from typing import TYPE_CHECKING, NamedTuple
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
+
+if TYPE_CHECKING:
+    import openai
 
 
 class Provider(NamedTuple):
@@ -75,6 +80,37 @@ async def structured[M: BaseModel](
         return None, "length"
     except openai.ContentFilterFinishReasonError:
         return None, "content_filter"
+    except (ValidationError, openai.BadRequestError):
+        # Model or proxy (e.g. LiteLLM routers) ignored/rejected json_schema: ask in the prompt.
+        return await _json_in_prompt(client, name, system, user, schema, max_tokens)
     choice = completion.choices[0]
     reason = "refusal" if choice.message.refusal else str(choice.finish_reason)
     return choice.message.parsed, reason
+
+
+_JSON_OBJECT = re.compile(r"\{.*\}", re.DOTALL)
+
+
+async def _json_in_prompt[M: BaseModel](
+    client: "openai.AsyncOpenAI",
+    name: str,
+    system: str,
+    user: str,
+    schema: type[M],
+    max_tokens: int,
+) -> tuple[M | None, str]:
+    system += (
+        "\n\nReply with ONLY one JSON object matching this JSON schema, no other text:\n"
+        + json.dumps(schema.model_json_schema())
+    )
+    completion = await client.chat.completions.create(
+        model=name,
+        max_completion_tokens=max_tokens,
+        messages=[{"role": "system", "content": system}, {"role": "user", "content": user}],
+    )
+    choice = completion.choices[0]
+    m = _JSON_OBJECT.search(choice.message.content or "")  # tolerate ```json fences / chatter
+    try:
+        return schema.model_validate_json(m[0] if m else ""), str(choice.finish_reason)
+    except ValidationError:
+        return None, "invalid_json"
