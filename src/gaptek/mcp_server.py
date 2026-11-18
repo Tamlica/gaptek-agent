@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 import yaml
+from dotenv import load_dotenv
 from mcp.server.mcpserver import MCPServer
 
 from gaptek.config import ConfigError, Persona, RunConfig, Task, load_persona, load_task
@@ -16,6 +17,7 @@ from gaptek.runner import new_run_dir, run_and_report
 
 HOME = Path(os.environ.get("GAPTEK_HOME", ".")).resolve()
 PERSONAS = HOME / "personas"
+load_dotenv(HOME / ".env")  # real env vars win over .env
 
 mcp = MCPServer(
     "gaptek",

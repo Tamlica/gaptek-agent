@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import typer
+from dotenv import find_dotenv, load_dotenv
 from rich.console import Console
 from rich.table import Table
 
@@ -14,6 +15,8 @@ if TYPE_CHECKING:
     from gaptek.runner import Outcome
 
 from gaptek.config import ConfigError, Persona, RunConfig, Task, load_persona, load_task
+
+load_dotenv(find_dotenv(usecwd=True))  # real env vars win over .env
 
 app = typer.Typer(no_args_is_help=True, add_completion=False)
 console = Console()

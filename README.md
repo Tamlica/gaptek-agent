@@ -17,8 +17,32 @@ and writes findings for developers.
 
 ```bash
 uv sync && uv run playwright install chromium
-export ANTHROPIC_API_KEY=...          # tester + analyst models
+cp .env.example .env                  # then set models + API keys
 ```
+
+### Models and providers
+
+Models are named `provider:model` and set in `.env` (or the environment, or `--tester-model` /
+`--analyst-model`):
+
+```bash
+GAPTEK_TESTER_MODEL=anthropic:claude-haiku-5-5   # small on purpose
+GAPTEK_ANALYST_MODEL=anthropic:claude-opus-5-5   # strong
+```
+
+| Provider | Example model | Key |
+|---|---|---|
+| `anthropic` | `anthropic:claude-haiku-5-5` (bare names also mean anthropic) | `ANTHROPIC_API_KEY` |
+| `openai` | `openai:gpt-5-mini` | `OPENAI_API_KEY` |
+| `gemini` | `gemini:gemini-2.5-flash` | `GEMINI_API_KEY` |
+| `openrouter` | `openrouter:meta-llama/llama-3.3-70b-instruct` | `OPENROUTER_API_KEY` |
+| `groq` | `groq:llama-3.3-70b-versatile` | `GROQ_API_KEY` |
+| `deepseek` | `deepseek:deepseek-chat` | `DEEPSEEK_API_KEY` |
+| `ollama` | `ollama:qwen3:8b` (local, no key) | - |
+
+Everything except `anthropic` uses the OpenAI-compatible chat API with structured outputs, so the
+model must support JSON-schema output. `<PROVIDER>_BASE_URL` overrides an endpoint;
+`OPENAI_BASE_URL` points `openai:` at any other OpenAI-compatible server (vLLM, LM Studio...).
 
 ## Try it on the demo app
 
@@ -43,7 +67,7 @@ gaptek report  <run_dir> [--reanalyze]
 gaptek batch   --personas personas/ --task T [--runs-per-persona 3] [--seed N]
 ```
 
-Defaults: tester `claude-haiku-5-5` (small on purpose), analyst `claude-opus-5-5`.
+Defaults: tester `anthropic:claude-haiku-5-5`, analyst `anthropic:claude-opus-5-5` (see above).
 The same `--seed` gives the same misclick / typo / missed-element decisions.
 
 ## Personas and tasks
@@ -74,6 +98,8 @@ claude mcp add gaptek --env GAPTEK_HOME=/path/to/gaptek-agent -- \
   uv --directory /path/to/gaptek-agent run gaptek-mcp
 ```
 
+The server reads models and API keys from `$GAPTEK_HOME/.env`, so no `--env` keys are needed.
+
 Tools: `list_personas`, `run_test(persona, task, seed?, analyze?)` (returns a `run_id` and runs in
 the background; `task` is a YAML path or inline YAML), `get_findings(run_id)`.
 
@@ -93,4 +119,4 @@ uv run ruff check . && uv run ruff format .
 uv run mypy src
 ```
 
-Design: `docs/SPEC.md`. Build plan: `docs/PLAN.md`. Progress: `docs/CHANGELOG.md`.
+Design: `docs/SPEC.md`. Validation protocol: `docs/VALIDATION.md`.

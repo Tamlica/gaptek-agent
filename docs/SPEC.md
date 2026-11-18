@@ -31,6 +31,7 @@ Non-goals (v1): native mobile apps, visual regression, load testing, replacing r
 
 Two models, deliberately separated:
 - **Tester**: plays the user. Constrained, ideally a smaller model (configurable).
+  Tester and analyst may use different providers (see §8, Models).
 - **Analyst**: reads the trace afterwards and writes developer-facing findings. Never acts.
 
 ## 3. Modules (`src/gaptek/`)
@@ -48,8 +49,9 @@ Two models, deliberately separated:
 | `runner.py` | Main loop, stop conditions, trace writing |
 | `analyst.py` | Post-run analysis → `findings.json` |
 | `report.py` | Jinja2 HTML report |
+| `llm.py` | One structured-output call over providers (Anthropic SDK; OpenAI SDK for OpenAI-compatible APIs) |
 | `cli.py` | Typer CLI |
-| `mcp_server.py` | (Phase 4) FastMCP wrapper |
+| `mcp_server.py` | FastMCP wrapper |
 
 ## 4. Perception filter (the core)
 
@@ -124,6 +126,22 @@ progress_hints: ["/menu", "/cart", "/payment"]
 max_steps: 40
 ```
 
+### Models and `.env`
+Models are named `provider:model`; a bare name means `anthropic`. Providers: `anthropic` (native
+SDK) and the OpenAI-compatible `openai`, `gemini`, `openrouter`, `groq`, `deepseek`, `ollama`
+(table in `llm.py`; the model must support JSON-schema structured output).
+
+| Variable | Purpose |
+|---|---|
+| `GAPTEK_TESTER_MODEL` | default tester model (`anthropic:claude-haiku-5-5`) |
+| `GAPTEK_ANALYST_MODEL` | default analyst model (`anthropic:claude-opus-5-5`) |
+| `<PROVIDER>_API_KEY` | key per provider, e.g. `ANTHROPIC_API_KEY`, `GEMINI_API_KEY` (ollama needs none) |
+| `<PROVIDER>_BASE_URL` | optional endpoint override; `OPENAI_BASE_URL` targets any OpenAI-compatible server |
+
+The CLI loads `.env` from the current directory; the MCP server from `$GAPTEK_HOME/.env`.
+Real environment variables win over `.env`; `--tester-model` / `--analyst-model` win over both.
+See `.env.example`.
+
 ## 9. Outputs (`runs/<timestamp>-<task>-<persona>/`)
 - `trace.jsonl` — one line per step: observation, tester output, executed action, noise applied, patience, screenshot path
 - `screenshots/step-NNN.png`
@@ -144,12 +162,13 @@ max_steps: 40
 
 ## 10. CLI
 ```
-gaptek run --persona P --task T [--seed N] [--headed] [--tester-model M] [--analyst-model M]
+gaptek observe --persona P --url U [--seed N]
+gaptek run --persona P --task T [--seed N] [--headed] [--tester-model M] [--analyst-model M] [--no-analyze]
 gaptek batch --personas dir/ --task T --runs-per-persona 3
-gaptek report <run_dir>
+gaptek report <run_dir> [--reanalyze]
 ```
 
-## 11. MCP (Phase 4)
+## 11. MCP
 Tools: `list_personas`, `run_test(persona, task_yaml_or_inline)` (returns run_id, runs in background),
 `get_findings(run_id)`. Plus a Claude Code skill `gaptek-test` that: writes a task YAML for the flow
 the dev names, calls `run_test`, reads findings, proposes code fixes. The skill must not leak source code

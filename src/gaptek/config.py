@@ -1,5 +1,6 @@
 """Pydantic models for persona, task and run config, plus YAML loading."""
 
+import os
 from pathlib import Path
 from typing import Literal
 
@@ -77,8 +78,13 @@ class Task(_Strict):
 class RunConfig(_Strict):
     seed: int = 0
     headed: bool = False
-    tester_model: str = "claude-haiku-5-5"
-    analyst_model: str = "claude-opus-5-5"
+    # "provider:model" (see llm.py); overridable via env / .env
+    tester_model: str = Field(
+        default_factory=lambda: os.environ.get("GAPTEK_TESTER_MODEL", "anthropic:claude-haiku-5-5")
+    )
+    analyst_model: str = Field(
+        default_factory=lambda: os.environ.get("GAPTEK_ANALYST_MODEL", "anthropic:claude-opus-5-5")
+    )
     runs_dir: Path = Path("runs")
 
 

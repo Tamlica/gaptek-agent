@@ -9,15 +9,16 @@ mechanically limited in what it can perceive and do. Never rely on "pretend you 
 
 Read before working:
 - `docs/SPEC.md` — architecture, modules, data formats (source of truth)
-- `docs/PLAN.md` — phased build plan with acceptance criteria. Work phase by phase; do not skip ahead.
+- `docs/VALIDATION.md` — protocol for checking results against real people; findings are unvalidated until a flow has an entry there
 
 ## Stack
 - Python 3.12, managed with `uv`
 - Playwright (Python, async) for browser control
-- Anthropic SDK for LLM calls (tester model and analyst model are configurable separately)
+- LLM calls go through `llm.py`: Anthropic SDK, or OpenAI SDK for OpenAI-compatible providers.
+  Models are `provider:model`, set via `.env` (tester and analyst configured separately)
 - Pydantic v2 for all configs and data models
 - Typer for the CLI
-- FastMCP for the MCP server (Phase 4)
+- FastMCP for the MCP server
 - Jinja2 for HTML reports
 - pytest + pytest-asyncio for tests
 
@@ -37,4 +38,3 @@ Read before working:
 - Every step is logged (observation, model reasoning, action, screenshot path) to the run directory.
 - Keep modules small and pure where possible; perception filters must be unit-testable without a browser.
 - User-facing persona text and reasoning are in Indonesian; code, comments, and docs are in English.
-- Do not add features outside the current phase in `docs/PLAN.md`.

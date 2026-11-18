@@ -4,8 +4,9 @@ import json
 from pathlib import Path
 from typing import Any, Literal
 
-import anthropic
 from pydantic import BaseModel
+
+from gaptek.llm import structured
 
 Severity = Literal["high", "medium", "low"]
 
@@ -111,24 +112,17 @@ def validate(out: AnalystOutput, trace: list[dict[str, Any]], run_dir: Path) -> 
 async def analyze(run_dir: Path, model: str) -> Findings:
     meta = json.loads((run_dir / "run.json").read_text(encoding="utf-8"))
     trace = load_trace(run_dir)
-    client = anthropic.AsyncAnthropic()
-    resp = await client.messages.parse(
-        model=model,
-        max_tokens=16000,
-        system=SYSTEM,
-        messages=[{"role": "user", "content": format_trace(meta, trace)}],
-        output_format=AnalystOutput,
-    )
-    if resp.parsed_output is None:
-        raise RuntimeError(f"analyst returned no findings (stop_reason={resp.stop_reason})")
+    out, reason = await structured(model, SYSTEM, format_trace(meta, trace), AnalystOutput, 16000)
+    if out is None:
+        raise RuntimeError(f"analyst returned no findings (stop_reason={reason})")
     findings = Findings(
         result=meta["result"],
         steps=meta["steps"],
         persona=meta["persona"],
         task=meta["task"],
         seed=meta["seed"],
-        summary=resp.parsed_output.summary,
-        issues=validate(resp.parsed_output, trace, run_dir),
+        summary=out.summary,
+        issues=validate(out, trace, run_dir),
     )
     (run_dir / "findings.json").write_text(findings.model_dump_json(indent=2), encoding="utf-8")
     return findings

@@ -3,10 +3,10 @@
 from collections.abc import Awaitable, Callable, Sequence
 from typing import Literal
 
-import anthropic
 from pydantic import BaseModel
 
 from gaptek.config import Persona, Task
+from gaptek.llm import structured
 
 Feeling = Literal["tenang", "bingung", "ragu", "kesal", "takut", "menyerah"]
 Action = Literal["tekan", "ketik", "gulir", "kembali", "tunggu", "menyerah", "selesai"]
@@ -72,20 +72,13 @@ class Tester:
     def __init__(self, persona: Persona, task: Task, model: str) -> None:
         self.system = system_prompt(persona, task)
         self.model = model
-        self.client = anthropic.AsyncAnthropic()
 
     async def decide(self, observation: str, history: Sequence[str]) -> Intent:
-        resp = await self.client.messages.parse(
-            model=self.model,
-            max_tokens=4000,
-            system=self.system,
-            messages=[{"role": "user", "content": user_prompt(observation, history)}],
-            output_format=Intent,
+        intent, reason = await structured(
+            self.model, self.system, user_prompt(observation, history), Intent, 4000
         )
-        if resp.parsed_output is None:  # refusal / truncated: treat as a confused pause
+        if intent is None:  # refusal / truncated: treat as a confused pause
             return Intent(
-                pikiran=f"(tidak ada jawaban: {resp.stop_reason})",
-                perasaan="bingung",
-                aksi="tunggu",
+                pikiran=f"(tidak ada jawaban: {reason})", perasaan="bingung", aksi="tunggu"
             )
-        return resp.parsed_output
+        return intent
