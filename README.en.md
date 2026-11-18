@@ -122,3 +122,7 @@ uv run mypy src
 ```
 
 Design: `docs/SPEC.md`. Validation protocol: `docs/VALIDATION.md`.
+
+## License
+
+[MIT](LICENSE)

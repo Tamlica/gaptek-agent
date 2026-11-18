@@ -3,6 +3,7 @@ name = "gaptek-agent"
 version = "0.1.0"
 description = "Usability QA tool that simulates a non-technical Indonesian user"
 requires-python = ">=3.12,<3.13"
+license = "MIT"
 dependencies = [
     "anthropic>=2.8.0",
     "jinja2>=3.1.6",
