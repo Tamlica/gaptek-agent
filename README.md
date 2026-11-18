@@ -1,64 +1,70 @@
 # gaptek-agent
 
-Usability QA that simulates a non-technical ("gaptek") Indonesian user trying to finish a task in
-your web app, in a real browser. It finds friction that normal automated tests miss: jargon,
-English labels, icon-only buttons, tiny text, unclear next steps.
+**Bahasa Indonesia** | [English](README.en.md)
 
-Realism comes from **code constraints, not prompting**: the tester model only ever sees a filtered,
-plain-Indonesian description of the screen. Words outside the persona's vocabulary become `???`,
-icon-only buttons lose their hidden labels, small text may go unnoticed, long text is cut off, and
-taps/typing get seeded fat-finger noise. A separate, stronger analyst model reads the trace afterwards
-and writes findings for developers.
+Alat uji kegunaan (usability QA) yang mensimulasikan pengguna awam ("gaptek") Indonesia yang mencoba
+menyelesaikan suatu tugas di aplikasi web kamu, dengan browser sungguhan. Alat ini menemukan hambatan
+yang biasanya lolos dari tes otomatis biasa: istilah teknis, label berbahasa Inggris, tombol yang
+cuma berupa ikon, tulisan terlalu kecil, dan langkah berikutnya yang tidak jelas.
 
-> Results are a simulation. Treat them as hypotheses to check with real people (see
+Realisme datang dari **batasan di kode, bukan dari prompt**: model penguji hanya pernah melihat
+deskripsi layar yang sudah difilter, dalam bahasa Indonesia sederhana. Kata di luar kosakata persona
+berubah jadi `???`, tombol ikon kehilangan label tersembunyinya, tulisan kecil bisa tidak terlihat,
+teks panjang dipotong, dan ketukan/ketikan diberi gangguan "jari gemuk" yang di-seed. Setelah sesi
+selesai, model analis terpisah yang lebih kuat membaca jejak (trace) dan menulis temuan untuk
+developer.
+
+> Hasilnya adalah simulasi. Anggap sebagai hipotesis yang perlu dicek ke orang sungguhan (lihat
 > `docs/VALIDATION.md`).
 
-## Setup
+## Persiapan
 
 ```bash
 uv sync && uv run playwright install chromium
-cp .env.example .env                  # then set models + API keys
+cp .env.example .env                  # lalu isi model + API key
 ```
 
-### Models and providers
+### Model dan provider
 
-Models are named `provider:model` and set in `.env` (or the environment, or `--tester-model` /
-`--analyst-model`):
+Model ditulis dengan format `provider:model` dan diatur di `.env` (atau environment variable, atau
+`--tester-model` / `--analyst-model`):
 
 ```bash
-GAPTEK_TESTER_MODEL=anthropic:claude-haiku-5-5   # small on purpose
-GAPTEK_ANALYST_MODEL=anthropic:claude-opus-5-5   # strong
+GAPTEK_TESTER_MODEL=anthropic:claude-haiku-5-5   # sengaja model kecil
+GAPTEK_ANALYST_MODEL=anthropic:claude-opus-5-5   # model kuat
 ```
 
-| Provider | Example model | Key |
+| Provider | Contoh model | Key |
 |---|---|---|
-| `anthropic` | `anthropic:claude-haiku-5-5` (bare names also mean anthropic) | `ANTHROPIC_API_KEY` |
+| `anthropic` | `anthropic:claude-haiku-5-5` (nama tanpa provider juga berarti anthropic) | `ANTHROPIC_API_KEY` |
 | `openai` | `openai:gpt-5-mini` | `OPENAI_API_KEY` |
 | `gemini` | `gemini:gemini-2.5-flash` | `GEMINI_API_KEY` |
 | `openrouter` | `openrouter:meta-llama/llama-3.3-70b-instruct` | `OPENROUTER_API_KEY` |
 | `groq` | `groq:llama-3.3-70b-versatile` | `GROQ_API_KEY` |
 | `deepseek` | `deepseek:deepseek-chat` | `DEEPSEEK_API_KEY` |
-| `ollama` | `ollama:qwen3:8b` (local, no key) | - |
+| `ollama` | `ollama:qwen3:8b` (lokal, tanpa key) | - |
 
-Everything except `anthropic` uses the OpenAI-compatible chat API with structured outputs, so the
-model must support JSON-schema output. `<PROVIDER>_BASE_URL` overrides an endpoint;
-`OPENAI_BASE_URL` points `openai:` at any other OpenAI-compatible server (vLLM, LM Studio...).
+Semua selain `anthropic` memakai chat API yang kompatibel dengan OpenAI dengan structured output,
+jadi modelnya harus mendukung output JSON schema. `<PROVIDER>_BASE_URL` mengganti endpoint;
+`OPENAI_BASE_URL` mengarahkan `openai:` ke server lain yang kompatibel dengan OpenAI (vLLM,
+LM Studio, ...).
 
-## Try it on the demo app
+## Coba di aplikasi demo
 
 ```bash
-cd demo_app && python -m http.server 8000      # in another terminal
+cd demo_app && python -m http.server 8000      # di terminal lain
 uv run gaptek observe --persona personas/bu-sri.yaml --url "http://localhost:8000/#/form"
 uv run gaptek run --persona personas/bu-sri.yaml --task tasks/example.yaml --seed 1
 uv run gaptek run --persona personas/kontrol-melek-teknologi.yaml --task tasks/example.yaml
 ```
 
-`observe` needs no API key: it prints what is really on the page next to what the persona perceives.
+`observe` tidak butuh API key: perintah ini menampilkan isi halaman yang sebenarnya berdampingan
+dengan apa yang dilihat persona.
 
-Each run writes `runs/<timestamp>-<task>-<persona>-s<seed>/`:
+Setiap run menulis `runs/<timestamp>-<task>-<persona>-s<seed>/`:
 `trace.jsonl`, `screenshots/step-NNN.png`, `run.json`, `findings.json`, `report.html`.
 
-## Commands
+## Perintah
 
 ```
 gaptek observe --persona P --url U [--seed N]
@@ -67,56 +73,57 @@ gaptek report  <run_dir> [--reanalyze]
 gaptek batch   --personas personas/ --task T [--runs-per-persona 3] [--seed N]
 ```
 
-Defaults: tester `anthropic:claude-haiku-5-5`, analyst `anthropic:claude-opus-5-5` (see above).
-The same `--seed` gives the same misclick / typo / missed-element decisions.
+Default: penguji `anthropic:claude-haiku-5-5`, analis `anthropic:claude-opus-5-5` (lihat di atas).
+`--seed` yang sama menghasilkan keputusan salah-pencet / salah-ketik / elemen-terlewat yang sama.
 
-## Personas and tasks
+## Persona dan tugas
 
-Personas live in `personas/*.yaml`; every behavior knob (vocabulary, recognized icons, reading
-limit, font-size threshold, miss rate, misclick/typo rates, patience) is there.
-`kontrol-melek-teknologi` has no filters and no noise: if it fails, the flow or the success
-criteria are broken, not the UX.
+Persona ada di `personas/*.yaml`; semua pengaturan perilaku (kosakata, ikon yang dikenali, batas
+membaca, ambang ukuran huruf, peluang terlewat, peluang salah pencet/salah ketik, kesabaran) ada di
+sana. `kontrol-melek-teknologi` tidak punya filter dan gangguan: kalau persona ini gagal, berarti
+alur atau kriteria suksesnya yang rusak, bukan UX-nya.
 
-A task (`tasks/*.yaml`):
+Contoh tugas (`tasks/*.yaml`):
 
 ```yaml
 id: order-food
 url: http://localhost:5173
 goal_for_persona: "Kamu mau pesan nasi goreng buat makan siang, terus bayar."
 success:
-  url_contains: "/order/success"   # and/or text_visible: "Pesanan berhasil"
+  url_contains: "/order/success"   # dan/atau text_visible: "Pesanan berhasil"
 progress_hints: ["/menu", "/cart", "/payment"]
 max_steps: 40
 ```
 
-Success is judged by the runner from the page, never by the tester's claim.
+Keberhasilan dinilai oleh runner dari halaman, bukan dari pengakuan model penguji.
 
-## Use from Claude Code (MCP)
+## Pakai dari Claude Code (MCP)
 
 ```bash
 claude mcp add gaptek --env GAPTEK_HOME=/path/to/gaptek-agent -- \
   uv --directory /path/to/gaptek-agent run gaptek-mcp
 ```
 
-The server reads models and API keys from `$GAPTEK_HOME/.env`, so no `--env` keys are needed.
+Server membaca model dan API key dari `$GAPTEK_HOME/.env`, jadi tidak perlu memasukkan key lewat
+`--env`.
 
-Tools: `list_personas`, `run_test(persona, task, seed?, analyze?)` (returns a `run_id` and runs in
-the background; `task` is a YAML path or inline YAML), `get_findings(run_id)`.
+Tools: `list_personas`, `run_test(persona, task, seed?, analyze?)` (mengembalikan `run_id` dan
+berjalan di latar belakang; `task` berupa path YAML atau YAML langsung), `get_findings(run_id)`.
 
-For the guided workflow, copy the skill into your project or user skills:
+Untuk alur kerja terpandu, salin skill ke project atau skill pengguna kamu:
 
 ```bash
-cp -r skills/gaptek-test ~/.claude/skills/        # or <your-app>/.claude/skills/
+cp -r skills/gaptek-test ~/.claude/skills/        # atau <aplikasi-kamu>/.claude/skills/
 ```
 
-Then ask Claude Code: *"test the checkout flow as Bu Sri"*.
+Lalu minta ke Claude Code: *"tes alur checkout sebagai Bu Sri"*.
 
-## Development
+## Pengembangan
 
 ```bash
-uv run pytest            # unit tests + browser tests against demo_app (no API key needed)
+uv run pytest            # unit test + tes browser ke demo_app (tanpa API key)
 uv run ruff check . && uv run ruff format .
 uv run mypy src
 ```
 
-Design: `docs/SPEC.md`. Validation protocol: `docs/VALIDATION.md`.
+Desain: `docs/SPEC.md`. Protokol validasi: `docs/VALIDATION.md`.

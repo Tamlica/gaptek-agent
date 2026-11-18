@@ -38,3 +38,4 @@ Read before working:
 - Every step is logged (observation, model reasoning, action, screenshot path) to the run directory.
 - Keep modules small and pure where possible; perception filters must be unit-testable without a browser.
 - User-facing persona text and reasoning are in Indonesian; code, comments, and docs are in English.
+  Exception: `README.md` is Indonesian, `README.en.md` is its English copy. Keep both in sync.
